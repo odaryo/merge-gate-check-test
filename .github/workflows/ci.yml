@@ -1,0 +1,20 @@
+# N-1 / N-4 の試験用。同じ SHA に同名の check run `result` を複数作り、マージ判定がどれを使うかを見る。
+# draft 中、または fail ラベルがあると `result` は失敗する。slow ラベルがあると work が 300 秒かかる。
+name: ci
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+jobs:
+  work:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'cancel-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep ${{ contains(github.event.pull_request.labels.*.name, 'slow') && 300 || 5 }}
+  result:
+    needs: [work]
+    if: ${{ !cancelled() && !contains(github.event.pull_request.labels.*.name, 'cancel-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'fail')
+        run: echo "fail by draft or label" && exit 1
+      - run: echo ok

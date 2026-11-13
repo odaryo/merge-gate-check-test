@@ -1,0 +1,28 @@
+# N-5 の試験用。cancel-in-progress で取り消された run で、!cancelled() と always() の結果ジョブがどの結論になるかを見る。
+name: cancel
+on:
+  pull_request:
+    types: [labeled]
+concurrency:
+  group: cancel-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  work:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'cancel-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 180
+  result-not-cancelled:
+    needs: [work]
+    if: ${{ !cancelled() && contains(github.event.pull_request.labels.*.name, 'cancel-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+  result-always:
+    needs: [work]
+    if: ${{ always() && contains(github.event.pull_request.labels.*.name, 'cancel-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo ok
